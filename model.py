@@ -35,10 +35,10 @@ class Seq2Seq(object):
 
         self.vocab_size_encoder = self.vocab_size_decoder = cfg.vocab_size
 
-        for i in range(self.buckets[0]):
+        for i in range(self.buckets[0][0]):
             self.encoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
                                                       name="encoder{0}".format(i)))
-        for i in range(self.buckets[1]):
+        for i in range(self.buckets[0][1]):
             self.targets.append(tf.placeholder(tf.int32, shape=[None],
                                                name="decoder{0}".format(i)))
 
@@ -161,46 +161,45 @@ class Seq2Seq(object):
                 self.restore_sticky_weights = tf.no_op('restore_sticky_weights')
             cprint("[!] Model built", color="green")
 
+    def forward_with_feed_dict(self, session, questions, answers, is_training=False):
+        encoder_size, decoder_size = self.buckets[0]
+        input_feed = {self.is_training: is_training}
 
-def forward_with_feed_dict(self, session, questions, answers, is_training=False):
-    encoder_size, decoder_size = self.buckets[0]
-    input_feed = {self.is_training: is_training}
+        # Instead of an array of dim (batch_size, bucket_length),
+        # the model is passed a list of sized batch_size, containing vector of size bucket_length
+        for l in range(encoder_size):
+            input_feed[self.encoder_inputs[l].name] = questions[:, l]
 
-    # Instead of an array of dim (batch_size, bucket_length),
-    # the model is passed a list of sized batch_size, containing vector of size bucket_length
-    for l in range(encoder_size):
-        input_feed[self.encoder_inputs[l].name] = questions[:, l]
-
-    # Same for decoder_input
-    for l in range(decoder_size):
-        input_feed[self.targets[l].name] = answers[:, l]
-        input_feed[self.target_weights[l].name] = np.not_equal(answers[:, l], 0).astype(np.float32)
-
-    # Loss, a scalar
-    output_feed = [self.losses]
-
-    if is_training:
-        output_feed += [
-            self.global_step,  # Current global step
-            self.updates  # Nothing
-        ]
-
-    if not is_training:
+        # Same for decoder_input
         for l in range(decoder_size):
-            output_feed.append(self.output[l])
+            input_feed[self.targets[l].name] = answers[:, l]
+            input_feed[self.target_weights[l].name] = np.not_equal(answers[:, l], 0).astype(np.float32)
 
-    # Outputs is a list of size (3 + decoder_size)
-    outputs = session.run(output_feed, input_feed)
+        # Loss, a scalar
+        output_feed = [self.losses]
 
-    # Cleaner output dic
-    if not is_training:
-        outputs_dic = {
-            "predictions": outputs[-decoder_size:]
-        }
-    else:
-        outputs_dic = {}
+        if is_training:
+            output_feed += [
+                self.global_step,  # Current global step
+                self.updates  # Nothing
+            ]
 
-    # If is_training:
-    outputs_dic["losses"] = outputs[0]
+        if not is_training:
+            for l in range(decoder_size):
+                output_feed.append(self.outputs[l])
 
-    return outputs_dic
+        # Outputs is a list of size (3 + decoder_size)
+        outputs = session.run(output_feed, input_feed)
+
+        # Cleaner output dic
+        if not is_training:
+            outputs_dic = {
+                "predictions": outputs[-decoder_size:]
+            }
+        else:
+            outputs_dic = {}
+
+        # If is_training:
+        outputs_dic["losses"] = outputs[0]
+
+        return outputs_dic

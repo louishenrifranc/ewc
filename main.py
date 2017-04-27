@@ -90,7 +90,7 @@ if __name__ == '__main__':
     ########################### Second experiment ######################################
     # In this experiment we will train the same model on a new dataset where question and
     # answers are in French
-    with open(os.path.join('Data', 'Messenger', 'QA_Pairs_Chars_Buckets_FJ.pkl'), 'rb') as f:
+    with open(os.path.join('Data', 'Messenger', 'QA_Pairs_Chars_Buckets.pkl'), 'rb') as f:
         cprint("[*] Loading dataset for experiment 2", color="yellow")
         data_exp2 = pickle.load(f)
         qa_pairs = data_exp2['qa_pairs']

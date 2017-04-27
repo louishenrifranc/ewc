@@ -90,7 +90,8 @@ class Seq2Seq(object):
         # Optimization :
         train_vars = tf.trainable_variables()
 
-        opt = tf.train.AdamOptimizer(self.cfg.learning_rate)
+        # TODO: try Adam optimizer
+        opt = tf.train.GradientDescentOptimizer(self.cfg.learning_rate)
         grads = tf.gradients(self.losses, train_vars)
 
         grad_variances, fisher, sticky_weights = [], [], []

@@ -165,6 +165,17 @@ def train_task(sess, m, num_iter, disp_freq, trainset, testsets, lams=[0], resto
                     plt.title("ewc")
                 plt.gcf().set_size_inches(len(lams) * 5, 3.5)
 
+"""
+1. First training, no restore weight, simple SGD training.
+Train the model, and add a validation training set.
+
+1 bis: Run update Fisher matrix + save the last weights in sticky weights
+
+2 Train the model on a new model, with two validation set (the previous model and the last model)
+
+
+
+"""
 
 if __name__ == '__main__':
     plot_0 = 0

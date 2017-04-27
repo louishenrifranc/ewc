@@ -13,12 +13,14 @@ flags.DEFINE_float("learning_rate", 0.0003, "Learning rate of for adam [0.0001")
 flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
 flags.DEFINE_integer("batch_size", 16, "The size of the batch [64]")
 
-flags.DEFINE_integer("hidden_size", 256, "Hidden size of RNN cell [256]")
-flags.DEFINE_integer("embedding_size", 128, "Symbol embedding size")
-flags.DEFINE_integer("max_sequence_length", 100, "Maximum sequence length")
-
+flags.DEFINE_integer("hidden_size", 128, "Hidden size of RNN cell [256]")
+flags.DEFINE_integer("embedding_size", 64, "Symbol embedding size")
+flags.DEFINE_integer("max_sequence_length", 50, "Maximum sequence length")
+flags.DEFINE_integer("num_layers", 2, "Num of layers [3]")
 flags.DEFINE_integer("vocab_size", 55, "Size of the vocabulary")
 flags.DEFINE_float("validation_percent", 0.15, "Percentage for the testing set")
+
+# TODO: check if max_gradient_norm is needed
 
 cfg = flags.FLAGS
 

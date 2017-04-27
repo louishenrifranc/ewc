@@ -85,12 +85,8 @@ class Seq2Seq(object):
                 lambda x, y: seq2seq_f(x, y, tf.logical_not(self.is_training)),
                 softmax_loss_function=self.softmax_loss_function)
 
-            # TODO: remove this assert
-            assert len(self.outputs) == 1 and len(self.losses) == 1
-
             self.outputs = model_infos[0][0]
             self.losses = model_infos[1][0]
-            print("[DEBUG] size outputs: {}, size losses {}".format(len(self.outputs), len(self.losses)))
 
         # Optimization :
         train_vars = tf.trainable_variables()
@@ -137,72 +133,73 @@ class Seq2Seq(object):
             ewc_losses.append(
                 tf.reduce_sum(tf.square(v - sticky_weights[i]) * fisher[i]))
 
-            ewc_loss = self.losses + self.ewc_loss_coef * .5 * tf.add_n(ewc_losses)
-            grads_ewc = tf.gradients(ewc_loss, train_vars)
-            self.sticky_weights = sticky_weights
-            self.grad_variances = grad_variances
+        ewc_loss = self.losses + self.ewc_loss_coef * .5 * tf.add_n(ewc_losses)
+        grads_ewc = tf.gradients(ewc_loss, train_vars)
+        self.sticky_weights = sticky_weights
+        self.grad_variances = grad_variances
 
-            with tf.control_dependencies(update_grad_variances):
-                self.update_grad_variances = tf.no_op('update_grad_variances')
+        with tf.control_dependencies(update_grad_variances):
+            self.update_grad_variances = tf.no_op('update_grad_variances')
 
-            with tf.control_dependencies(update_grad_variances):
-                self.ts = tf.cond(
-                    tf.equal(self.ewc_loss_coef, tf.constant(0.)),
-                    lambda: opt.apply_gradients(zip(grads, train_vars)),
-                    lambda: opt.apply_gradients(zip(grads_ewc, train_vars)))
+        with tf.control_dependencies(update_grad_variances):
+            self.ts = tf.cond(
+                tf.equal(self.ewc_loss_coef, tf.constant(0.)),
+                lambda: opt.apply_gradients(zip(grads, train_vars)),
+                lambda: opt.apply_gradients(zip(grads_ewc, train_vars)))
 
-            with tf.control_dependencies(update_fisher):
-                self.update_fisher = tf.no_op('update_fisher')
-            with tf.control_dependencies(replace_fisher):
-                self.replace_fisher = tf.no_op('replace_fisher')
-            with tf.control_dependencies(update_sticky_weights):
-                self.update_sticky_weights = tf.no_op('update_sticky_weights')
-            with tf.control_dependencies(restore_sticky_weights):
-                self.restore_sticky_weights = tf.no_op('restore_sticky_weights')
-            cprint("[!] Model built", color="green")
+        with tf.control_dependencies(update_fisher):
+            self.update_fisher = tf.no_op('update_fisher')
+        with tf.control_dependencies(replace_fisher):
+            self.replace_fisher = tf.no_op('replace_fisher')
+        with tf.control_dependencies(update_sticky_weights):
+            self.update_sticky_weights = tf.no_op('update_sticky_weights')
+        with tf.control_dependencies(restore_sticky_weights):
+            self.restore_sticky_weights = tf.no_op('restore_sticky_weights')
+        cprint("[!] Model built", color="green")
 
-    def forward_with_feed_dict(self, session, questions, answers, is_training=False, ewc_loss_coeff=0):
-        encoder_size, decoder_size = self.buckets[0]
-        input_feed = {self.is_training: is_training}
 
-        # Instead of an array of dim (batch_size, bucket_length),
-        # the model is passed a list of sized batch_size, containing vector of size bucket_length
-        for l in range(encoder_size):
-            input_feed[self.encoder_inputs[l].name] = questions[:, l]
+def forward_with_feed_dict(self, session, questions, answers, is_training=False, ewc_loss_coeff=0):
+    encoder_size, decoder_size = self.buckets[0]
+    input_feed = {self.is_training: is_training}
 
-        # Same for decoder_input
+    # Instead of an array of dim (batch_size, bucket_length),
+    # the model is passed a list of sized batch_size, containing vector of size bucket_length
+    for l in range(encoder_size):
+        input_feed[self.encoder_inputs[l].name] = questions[:, l]
+
+    # Same for decoder_input
+    for l in range(decoder_size):
+        input_feed[self.targets[l].name] = answers[:, l]
+        input_feed[self.target_weights[l].name] = np.not_equal(answers[:, l], 0).astype(np.float32)
+
+    if ewc_loss_coeff != 0:
+        input_feed[self.ewc_loss_coef] = ewc_loss_coeff
+
+    # Loss, a scalar
+    output_feed = [self.losses]
+
+    if is_training:
+        output_feed += [
+            self.global_step,  # Current global step
+            self.updates  # Nothing
+        ]
+
+    if not is_training:
         for l in range(decoder_size):
-            input_feed[self.targets[l].name] = answers[:, l]
-            input_feed[self.target_weights[l].name] = np.not_equal(answers[:, l], 0).astype(np.float32)
+            output_feed.append(self.outputs[l])
 
-        if ewc_loss_coeff != 0:
-            input_feed[self.ewc_loss_coef] = ewc_loss_coeff
+    # Outputs is a list of size (3 + decoder_size)
+    outputs = session.run(output_feed, input_feed)
 
-        # Loss, a scalar
-        output_feed = [self.losses]
+    # Cleaner output dic
+    if not is_training:
+        outputs_dic = {
+            "predictions": outputs[-decoder_size:]
+        }
+    else:
+        outputs_dic = {}
 
-        if is_training:
-            output_feed += [
-                self.global_step,  # Current global step
-                self.updates  # Nothing
-            ]
+    # If is_training:
+    outputs_dic["losses"] = outputs[0]
 
-        if not is_training:
-            for l in range(decoder_size):
-                output_feed.append(self.outputs[l])
-
-        # Outputs is a list of size (3 + decoder_size)
-        outputs = session.run(output_feed, input_feed)
-
-        # Cleaner output dic
-        if not is_training:
-            outputs_dic = {
-                "predictions": outputs[-decoder_size:]
-            }
-        else:
-            outputs_dic = {}
-
-        # If is_training:
-        outputs_dic["losses"] = outputs[0]
-
-        return outputs_dic
+    return outputs_dic

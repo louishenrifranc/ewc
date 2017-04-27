@@ -1,11 +1,13 @@
 import tensorflow as tf
-from tqdm import trange
 import model
 import pickle
 import os
 import utils
 import numpy as np
+from termcolor import cprint
+import random
 
+debug = True
 # Global variables
 flags = tf.app.flags
 flags.DEFINE_integer("nb_epochs", 10000, "Epoch to train [100 000]")
@@ -24,6 +26,10 @@ flags.DEFINE_float("validation_percent", 0.15, "Percentage for the testing set")
 
 cfg = flags.FLAGS
 
+if debug:
+    cfg.hidden_size = 32
+    cfg.num_layers = 1
+
 if __name__ == '__main__':
     with open(os.path.join('Data', 'MovieQA', 'idx_to_chars.pkl'), 'rb') as f:
         idx_to_char = pickle.load(f)
@@ -31,36 +37,36 @@ if __name__ == '__main__':
     buckets = [(100, 100)]
 
     # To make things simpler, make a single bucket of size (100, 100)
-    model = model.Seq2Seq(buckets, cfg)
-    model.build()
-
-    # Interactive session
-    sess = tf.InteractiveSession()
-    sess.run(tf.global_variables_initializer())
-    summary_writer = tf.summary.FileWriter('logs/',
-                                           graph=sess.graph,
-                                           flush_secs=20)
+    # model = model.Seq2Seq(buckets, cfg)
+    # model.build()
+    #
+    # # Interactive session
+    # sess = tf.InteractiveSession()
+    # sess.run(tf.global_variables_initializer())
+    # summary_writer = tf.summary.FileWriter('logs/',
+    #                                        graph=sess.graph,
+    #                                        flush_secs=20)
 
     ########################### First experiment ######################################
     # In this experiment we will train a model to predict answer from question, given
     # that both question and answer are in English
     with open(os.path.join('Data', 'MovieQA', 'QA_Pairs_Chars_Buckets.pkl'), 'rb') as f:
+        cprint("[*] Loading dataset for experiment 1", color="yellow")
         data_exp1 = pickle.load(f)
         qa_pairs = data_exp1['qa_pairs']
         bucket_lengths = data_exp1['bucket_lengths']
         sentences_exp1 = utils.parse_data_for_ewc_experiment(qa_pairs, bucket_lengths, cfg.max_sequence_length)
 
         # Split training and testing set
-        indexes = np.arange(len(sentences_exp1))
-        np.random.shuffle(indexes)
+        random.shuffle(sentences_exp1)
 
-        indexes = np.split(indexes, [int((1 - cfg.validation_percent) * len(indexes))])
-
-        train_exp1 = sentences_exp1[indexes[0]]
-        test_exp1 = sentences_exp1[indexes[1]]
+        train_exp1 = sentences_exp1[:len(sentences_exp1) // 2]
+        test_exp1 = sentences_exp1[len(sentences_exp1) // 2:]
         # __ CLEAN DICTIONARY __
-        del data_exp1, bucket_lengths, indexes, sentences_exp1
+        del data_exp1, bucket_lengths, sentences_exp1
+        cprint("[*] Loaded", color="green")
 
+    cprint("[*] Starting Experiment 1", color="yellow")
     utils.train_task(sess=sess,
                      model=model,
                      nb_epochs=cfg.nb_epochs,
@@ -71,7 +77,10 @@ if __name__ == '__main__':
                      buckets=buckets,
                      summary_writer=summary_writer,
                      exp_name="experience1")
+    # saver.save(self.sess, global_step=current_iter, save_path="model/{}".format("model"))
+    cprint("[*] Experiment 1 over", color="green")
 
+    cprint("[*] Compute Fisher matrix and saved all weights", color="yellow")
     sess.run([model.update_fisher, model.update_sticky_weights])
 
     # __ CLEAN DICTIONARY __
@@ -81,23 +90,22 @@ if __name__ == '__main__':
     # In this experiment we will train the same model on a new dataset where question and
     # answers are in French
     with open(os.path.join('Data', 'Messenger', 'QA_Pairs_Chars_Buckets_FJ.pkl'), 'rb') as f:
+        cprint("[*] Loading dataset for experiment 2", color="yellow")
         data_exp2 = pickle.load(f)
         qa_pairs = data_exp2['qa_pairs']
         bucket_lengths = data_exp2['bucket_lengths']
         sentences_exp2 = utils.parse_data_for_ewc_experiment(qa_pairs, bucket_lengths, cfg.max_sequence_length)
 
         # Split training and testing set
-        indexes = np.arange(len(sentences_exp2))
-        np.random.shuffle(indexes)
+        random.shuffle(sentences_exp2)
 
-        indexes = np.split(indexes, [int((1 - cfg.validation_percent) * len(indexes))])
-
-        train_exp2 = sentences_exp2[indexes[0]]
-        test_exp2 = sentences_exp2[indexes[1]]
+        train_exp1 = sentences_exp2[:len(sentences_exp2) // 2]
+        test_exp1 = sentences_exp2[len(sentences_exp2) // 2:]
 
         # __ CLEAN DICTIONARY __
-        del data_exp2, bucket_lengths, indexes, sentences_exp2
+        del data_exp2, bucket_lengths, sentences_exp2
 
+    cprint("[*] Starting Experiment 2", color="yellow")
     utils.train_task(sess=sess,
                      model=model,
                      nb_epochs=cfg.nb_epochs,
@@ -109,3 +117,6 @@ if __name__ == '__main__':
                      summary_writer=summary_writer,
                      exp_name="experience2",
                      restore_weights=True)
+    cprint("[*] Experiment 2 over", color="green")
+
+    cprint("[!] END [!]", color="red")

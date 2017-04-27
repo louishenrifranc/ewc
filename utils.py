@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+from tqdm import trange
 
 
 def get_next_batch(data, batch_size, buckets):
@@ -32,7 +33,7 @@ def train_task(sess, model,
         if restore_weights:
             sess.run(model.restore_sticky_weights)
 
-        for nb_iter in range(nb_epochs):
+        for nb_iter in trange(nb_epochs):
             # Retrieve a training batch
             q_s, a_s = get_next_batch(training_data, batch_size, buckets)
 

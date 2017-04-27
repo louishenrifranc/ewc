@@ -95,7 +95,7 @@ class Seq2Seq(object):
         # TODO: try Adam optimizer
         opt = tf.train.GradientDescentOptimizer(self.cfg.learning_rate)
         grads = tf.gradients(self.losses, train_vars)
-
+        grads, _ = tf.clip_by_global_norm(grads, self.max_gradient_norm)
         grad_variances, fisher, sticky_weights = [], [], []
         update_grad_variances, update_fisher, replace_fisher, update_sticky_weights, restore_sticky_weights = \
             [], [], [], [], []
@@ -137,6 +137,8 @@ class Seq2Seq(object):
 
         ewc_loss = self.losses + self.ewc_loss_coef * .5 * tf.add_n(ewc_losses)
         grads_ewc = tf.gradients(ewc_loss, train_vars)
+        grads_ewc, _ = tf.clip_by_global_norm(grads_ewc, self.max_gradient_norm)
+
         self.sticky_weights = sticky_weights
         self.grad_variances = grad_variances
 
@@ -160,16 +162,16 @@ class Seq2Seq(object):
         cprint("[!] Model built", color="green")
 
         # Control gradients with histogram
-        for gradient, variable in grads:
-            if isinstance(gradient, ops.IndexedSlices):
-                grad_values = gradient.values
-            else:
-                grad_values = gradient
-            tf.summary.histogram(variable.name, variable)
-            tf.summary.histogram(variable.name + "/gradients", grad_values)
-            tf.summary.histogram(variable.name + "/gradient_norm",
-                                 clip_ops.global_norm([grad_values]))
-            self.merged_summary_op = tf.summary.merge_all()
+        # for gradient, variable in grads:
+        #     if isinstance(gradient, ops.IndexedSlices):
+        #         grad_values = gradient.values
+        #     else:
+        #         grad_values = gradient
+        #     tf.summary.histogram(variable.name, variable)
+        #     tf.summary.histogram(variable.name + "/gradients", grad_values)
+        #     tf.summary.histogram(variable.name + "/gradient_norm",
+        #                          clip_ops.global_norm([grad_values]))
+        #     self.merged_summary_op = tf.summary.merge_all()
 
     def forward_with_feed_dict(self, session, questions, answers, is_training=False, ewc_loss_coeff=0):
 

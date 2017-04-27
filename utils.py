@@ -56,9 +56,9 @@ def train_task(sess, model,
                         value=[tf.Summary.Value(tag=exp_name + "_test_task_" + str(i), simple_value=out["losses"])])
                     summary_writer.add_summary(test_loss, global_step=nb_iter)
 
-                # Plot histogram for gradients
-                summary_gradients = model.merged_summary_op.eval()
-                summary_writer.add_summary(summary_gradients, nb_iter)
+                    # Plot histogram for gradients
+                    # summary_gradients = model.merged_summary_op.eval()
+                    # summary_writer.add_summary(summary_gradients, nb_iter)
 
 
 ########################### Merge all sentences ######################################

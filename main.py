@@ -22,7 +22,7 @@ flags.DEFINE_integer("num_layers", 2, "Num of layers [3]")
 flags.DEFINE_integer("vocab_size", 55, "Size of the vocabulary")
 flags.DEFINE_float("validation_percent", 0.15, "Percentage for the testing set")
 
-# TODO: check if max_gradient_norm is needed
+# TODO: check if max_gradient_norm is needed. 
 
 cfg = flags.FLAGS
 

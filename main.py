@@ -22,7 +22,7 @@ flags.DEFINE_integer("num_layers", 2, "Num of layers [3]")
 flags.DEFINE_integer("vocab_size", 55, "Size of the vocabulary")
 flags.DEFINE_float("validation_percent", 0.15, "Percentage for the testing set")
 
-# TODO: check if max_gradient_norm is needed. 
+# TODO: check if max_gradient_norm is needed.
 
 cfg = flags.FLAGS
 
@@ -32,6 +32,9 @@ if debug:
     cfg.nb_epochs = 200
 
 if __name__ == '__main__':
+    if tf.gfile.Exists("logs"):
+        tf.gfile.DeleteRecursively("logs")
+
     with open(os.path.join('Data', 'MovieQA', 'idx_to_chars.pkl'), 'rb') as f:
         idx_to_char = pickle.load(f)
 

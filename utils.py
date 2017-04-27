@@ -28,8 +28,10 @@ def train_task(sess, model,
                buckets,
                summary_writer,
                exp_name,
+               saver,
                restore_weights=False):
     freq_test = 100
+    freq_save = 1000
     for l in lambdas:
         if restore_weights:
             sess.run(model.restore_sticky_weights)
@@ -63,6 +65,9 @@ def train_task(sess, model,
                     # Plot histogram for gradients
                     # summary_gradients = model.merged_summary_op.eval()
                     # summary_writer.add_summary(summary_gradients, nb_iter)
+            if nb_iter % freq_save == 0:
+                saver.save(sess, global_step=0,
+                           save_path="model/{}_{}".format("model_exp2", "sgd" if l == 0 else "ewc"))
 
 
 ########################### Merge all sentences ######################################

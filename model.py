@@ -1,8 +1,6 @@
 import numpy as np
 import tensorflow as tf
 from termcolor import cprint
-from tensorflow.python.ops import clip_ops
-from tensorflow.python.framework import ops
 import tensorflow.contrib.legacy_seq2seq as seq2seq
 
 

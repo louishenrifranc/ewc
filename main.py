@@ -3,26 +3,23 @@ import model
 import pickle
 import os
 import utils
-import numpy as np
 from termcolor import cprint
 import random
 
-debug = True
+debug = False
 # Global variables
 flags = tf.app.flags
-flags.DEFINE_integer("nb_epochs", 15000, "Epoch to train [100 000]")
+flags.DEFINE_integer("nb_epochs", 30000, "Epoch to train [100 000]")
 flags.DEFINE_float("learning_rate", 0.0003, "Learning rate of for adam [0.0001")
 flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
 flags.DEFINE_integer("batch_size", 16, "The size of the batch [64]")
 
-flags.DEFINE_integer("hidden_size", 128, "Hidden size of RNN cell [256]")
-flags.DEFINE_integer("embedding_size", 64, "Symbol embedding size")
-flags.DEFINE_integer("max_sequence_length", 50, "Maximum sequence length")
+flags.DEFINE_integer("hidden_size", 256, "Hidden size of RNN cell [256]")
+flags.DEFINE_integer("embedding_size", 128, "Symbol embedding size")
+flags.DEFINE_integer("max_sequence_length", 100, "Maximum sequence length")
 flags.DEFINE_integer("num_layers", 2, "Num of layers [3]")
 flags.DEFINE_integer("vocab_size", 55, "Size of the vocabulary")
 flags.DEFINE_float("validation_percent", 0.15, "Percentage for the testing set")
-
-# TODO: check if max_gradient_norm is needed.
 
 cfg = flags.FLAGS
 
@@ -32,8 +29,11 @@ if debug:
     cfg.nb_epochs = 200
 
 if __name__ == '__main__':
-    if tf.gfile.Exists("logs"):
-        tf.gfile.DeleteRecursively("logs")
+    # if tf.gfile.Exists("logs/"):
+    #     try:
+    #         os.remove("logs/")
+    #     except:
+    #         cprint("[!] Can't remove logs old folder")
 
     with open(os.path.join('Data', 'MovieQA', 'idx_to_chars.pkl'), 'rb') as f:
         idx_to_char = pickle.load(f)
@@ -71,22 +71,26 @@ if __name__ == '__main__':
         del data_exp1, bucket_lengths, sentences_exp1
         cprint("[*] Loaded", color="green")
 
-    cprint("[*] Starting Experiment 1", color="yellow")
-    utils.train_task(sess=sess,
-                     model=model,
-                     nb_epochs=cfg.nb_epochs,
-                     training_data=train_exp1,
-                     testing_datas=[test_exp1],
-                     lambdas=[0],
-                     batch_size=cfg.batch_size,
-                     buckets=buckets,
-                     summary_writer=summary_writer,
-                     exp_name="experience1")
-    cprint("[*] Experiment 1 over", color="green")
+    # cprint("[*] Starting Experiment 1", color="yellow")
+    # utils.train_task(sess=sess,
+    #                  model=model,
+    #                  nb_epochs=cfg.nb_epochs,
+    #                  training_data=train_exp1,
+    #                  testing_datas=[test_exp1],
+    #                  lambdas=[0],
+    #                  batch_size=cfg.batch_size,
+    #                  buckets=buckets,
+    #                  summary_writer=summary_writer,
+    #                  exp_name="experience1")
+    # cprint("[*] Experiment 1 over", color="green")
 
-    cprint("[*] Saving model after experiment 1", color="green")
-    saver.save(sess, global_step=0, save_path="model/{}".format("model_exp1"))
+    # cprint("[*] Saving model after experiment 1", color="green")
+    # saver.save(sess, global_step=0, save_path="model/{}".format("model_exp1"))
 
+    last_saved_model = tf.train.latest_checkpoint("model/")
+    if last_saved_model is not None:
+        saver.restore(sess, last_saved_model)
+        print("Restoring a model !!!!!!!!!")
     cprint("[*] Compute Fisher matrix and saved all weights", color="yellow")
     sess.run([model.update_fisher, model.update_sticky_weights])
 
@@ -123,10 +127,10 @@ if __name__ == '__main__':
                      buckets=buckets,
                      summary_writer=summary_writer,
                      exp_name="experience2",
+                     saver=saver,
                      restore_weights=True)
     cprint("[*] Experiment 2 over", color="green")
 
     cprint("[*] Saving model after experiment 2", color="green")
-    saver.save(sess, global_step=0, save_path="model/{}".format("model_exp2"))
 
     cprint("[!] END [!]", color="red")

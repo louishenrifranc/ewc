@@ -43,7 +43,8 @@ def train_task(sess, model,
 
             # Save the training loss
             train_loss = tf.Summary(
-                value=[tf.Summary.Value(tag=exp_name + "_train_ewc_coeff_" + str(l), simple_value=out["losses"])])
+                value=[tf.Summary.Value(tag=exp_name + "_train_" + ("ewc" if l != 0 else "sgd"),
+                                        simple_value=out["losses"])])
             summary_writer.add_summary(train_loss, global_step=nb_iter)
 
             # Compute test loss
@@ -54,8 +55,9 @@ def train_task(sess, model,
                     out = model.forward_with_feed_dict(sess, q_s, a_s, is_training=False, ewc_loss_coeff=l)
 
                     test_loss = tf.Summary(
-                        value=[tf.Summary.Value(tag=exp_name + "ewc_coeff" + str(l) + "_test_task_" + str(i),
-                                                simple_value=out["losses"])])
+                        value=[tf.Summary.Value(
+                            tag=exp_name + "_test_" + ("ewc" if l != 0 else "sgd") + "_task_" + str(i),
+                            simple_value=out["losses"])])
                     summary_writer.add_summary(test_loss, global_step=nb_iter)
 
                     # Plot histogram for gradients

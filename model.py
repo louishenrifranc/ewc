@@ -85,13 +85,12 @@ class Seq2Seq(object):
                 lambda x, y: seq2seq_f(x, y, tf.logical_not(self.is_training)),
                 softmax_loss_function=self.softmax_loss_function)
 
-            self.outputs = model_infos[0]
-            self.losses = model_infos[1]
+            # TODO: remove this assert
+            assert len(self.outputs) == 1 and len(self.losses) == 1
 
-            self.outputs_test = []
-            for bucket_id in range(len(self.buckets)):
-                for i in range(self.buckets[bucket_id][1]):
-                    self.outputs_test[bucket_id].append(self.outputs[bucket_id][i])
+            self.outputs = model_infos[0][0]
+            self.losses = model_infos[1][0]
+            print("[DEBUG] size outputs: {}, size losses {}".format(len(self.outputs), len(self.losses)))
 
         # Optimization :
         train_vars = tf.trainable_variables()
@@ -138,28 +137,33 @@ class Seq2Seq(object):
             ewc_losses.append(
                 tf.reduce_sum(tf.square(v - sticky_weights[i]) * fisher[i]))
 
+            ewc_loss = self.losses + self.ewc_loss_coef * .5 * tf.add_n(ewc_losses)
+            grads_ewc = tf.gradients(ewc_loss, train_vars)
+            self.sticky_weights = sticky_weights
+            self.grad_variances = grad_variances
 
-            "" \
-            "" \
-            "" \
-            "" \
-            "" \
-            "" \
-            ""
-            # for b in range(len(self.buckets)):
-            #     cprint("Constructing the forward pass for bucket {}".format(b))
-            #     gradients = tf.gradients(self.losses[b], train_vars, aggregation_method=2)
-            #     clipped_gradients, norm = tf.clip_by_global_norm(gradients,
-            #                                                      self.max_gradient_norm)
-            #     self.gradient_norms.append(norm)
-            #     self.updates.append(opt.apply_gradients(
-            #         zip(clipped_gradients, train_vars), global_step=self.global_step))
+            with tf.control_dependencies(update_grad_variances):
+                self.update_grad_variances = tf.no_op('update_grad_variances')
 
+            with tf.control_dependencies(update_grad_variances):
+                self.ts = tf.cond(
+                    tf.equal(self.ewc_loss_coef, tf.constant(0.)),
+                    lambda: opt.apply_gradients(zip(grads, train_vars)),
+                    lambda: opt.apply_gradients(zip(grads_ewc, train_vars)))
+
+            with tf.control_dependencies(update_fisher):
+                self.update_fisher = tf.no_op('update_fisher')
+            with tf.control_dependencies(replace_fisher):
+                self.replace_fisher = tf.no_op('replace_fisher')
+            with tf.control_dependencies(update_sticky_weights):
+                self.update_sticky_weights = tf.no_op('update_sticky_weights')
+            with tf.control_dependencies(restore_sticky_weights):
+                self.restore_sticky_weights = tf.no_op('restore_sticky_weights')
             cprint("[!] Model built", color="green")
 
 
-def forward_with_feed_dict(self, bucket_id, session, questions, answers, is_training=False):
-    encoder_size, decoder_size = self.buckets[bucket_id]
+def forward_with_feed_dict(self, session, questions, answers, is_training=False):
+    encoder_size, decoder_size = self.buckets[0]
     input_feed = {self.is_training: is_training}
 
     # Instead of an array of dim (batch_size, bucket_length),
@@ -173,21 +177,17 @@ def forward_with_feed_dict(self, bucket_id, session, questions, answers, is_trai
         input_feed[self.target_weights[l].name] = np.not_equal(answers[:, l], 0).astype(np.float32)
 
     # Loss, a scalar
-    output_feed = [self.losses[bucket_id]]
+    output_feed = [self.losses]
 
     if is_training:
         output_feed += [
             self.global_step,  # Current global step
-            self.updates[bucket_id],  # Nothing
-            self.gradient_norms[bucket_id]  # A scalar the gradient norm
+            self.updates  # Nothing
         ]
-
-    if cfg.use_attention:
-        output_feed.append(self.attentions[bucket_id])
 
     if not is_training:
         for l in range(decoder_size):
-            output_feed.append(self.outputs_test[bucket_id][l])
+            output_feed.append(self.output[l])
 
     # Outputs is a list of size (3 + decoder_size)
     outputs = session.run(output_feed, input_feed)
@@ -199,9 +199,6 @@ def forward_with_feed_dict(self, bucket_id, session, questions, answers, is_trai
         }
     else:
         outputs_dic = {}
-
-    if cfg.use_attention:
-        outputs_dic["attentions"] = outputs[1]
 
     # If is_training:
     outputs_dic["losses"] = outputs[0]

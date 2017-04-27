@@ -10,7 +10,7 @@ import random
 debug = True
 # Global variables
 flags = tf.app.flags
-flags.DEFINE_integer("nb_epochs", 10000, "Epoch to train [100 000]")
+flags.DEFINE_integer("nb_epochs", 15000, "Epoch to train [100 000]")
 flags.DEFINE_float("learning_rate", 0.0003, "Learning rate of for adam [0.0001")
 flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
 flags.DEFINE_integer("batch_size", 16, "The size of the batch [64]")
@@ -29,6 +29,7 @@ cfg = flags.FLAGS
 if debug:
     cfg.hidden_size = 32
     cfg.num_layers = 1
+    cfg.nb_epochs = 200
 
 if __name__ == '__main__':
     with open(os.path.join('Data', 'MovieQA', 'idx_to_chars.pkl'), 'rb') as f:
@@ -37,15 +38,15 @@ if __name__ == '__main__':
     buckets = [(100, 100)]
 
     # To make things simpler, make a single bucket of size (100, 100)
-    # model = model.Seq2Seq(buckets, cfg)
-    # model.build()
-    #
-    # # Interactive session
-    # sess = tf.InteractiveSession()
-    # sess.run(tf.global_variables_initializer())
-    # summary_writer = tf.summary.FileWriter('logs/',
-    #                                        graph=sess.graph,
-    #                                        flush_secs=20)
+    model = model.Seq2Seq(buckets, cfg)
+    model.build()
+
+    # Interactive session
+    sess = tf.InteractiveSession()
+    sess.run(tf.global_variables_initializer())
+    summary_writer = tf.summary.FileWriter('logs/',
+                                           graph=sess.graph,
+                                           flush_secs=20)
 
     ########################### First experiment ######################################
     # In this experiment we will train a model to predict answer from question, given

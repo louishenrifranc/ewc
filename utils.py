@@ -16,22 +16,42 @@ def get_next_batch(data, batch_size, buckets):
     return q_pads, a_pads
 
 
-########################### Merge all sentences ######################################
-def train_task(sess, model, nb_epochs, training_data, testing_data, lambdas, batch_size, buckets,
+########################### Train a model for a task ######################################
+def train_task(sess, model,
+               nb_epochs,
+               training_data,
+               testing_datas,
+               lambdas,
+               batch_size,
+               buckets,
+               summary_writer,
+               exp_name,
                restore_weights=False):
-    for l in range(len(lambdas)):
+    freq_test = 100
+    for l in lambdas:
         if restore_weights:
             sess.run(model.restore_sticky_weights)
 
-    for nb_iter in range(nb_epochs):
-        q_s, a_s = get_next_batch(training_data, batch_size, buckets)
-        out = model.forward_with_feed_dict(sess, q_s, a_s, is_training=True)
-    """
-    summary_gen_loss = tf.Summary(value=[
-                tf.Summary.Value(tag="gen_loss", simple_value=extras[0]),
-])
- summary_writer.add_summary(summary_dis_loss, global_step=current_iter)
-    """
+        for nb_iter in range(nb_epochs):
+            # Retrieve a training batch
+            q_s, a_s = get_next_batch(training_data, batch_size, buckets)
+
+            # Forward and backward pass
+            out = model.forward_with_feed_dict(sess, q_s, a_s, is_training=True, ewc_loss_coeff=l)
+
+            # Save the training loss
+            train_loss = tf.Summary(value=[tf.Summary.Value(tag=exp_name + "_train", simple_value=out["losses"])])
+            summary_writer.add_summary(train_loss, global_step=nb_iter)
+
+            # Compute test loss
+            if nb_iter % freq_test == 0:
+                for i, testing_data in enumerate(testing_datas):
+                    q_s, a_s = get_next_batch(testing_data, batch_size, buckets)
+                    out = model.forward_with_feed_dict(sess, q_s, a_s, is_training=False, ewc_loss_coeff=l)
+
+                    test_loss = tf.Summary(
+                        value=[tf.Summary.Value(tag=exp_name + "_test_task_" + str(i), simple_value=out["losses"])])
+                    summary_writer.add_summary(test_loss, global_step=nb_iter)
 
 
 ########################### Merge all sentences ######################################

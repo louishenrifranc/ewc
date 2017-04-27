@@ -161,7 +161,7 @@ class Seq2Seq(object):
                 self.restore_sticky_weights = tf.no_op('restore_sticky_weights')
             cprint("[!] Model built", color="green")
 
-    def forward_with_feed_dict(self, session, questions, answers, is_training=False):
+    def forward_with_feed_dict(self, session, questions, answers, is_training=False, ewc_loss_coeff=0):
         encoder_size, decoder_size = self.buckets[0]
         input_feed = {self.is_training: is_training}
 
@@ -174,6 +174,9 @@ class Seq2Seq(object):
         for l in range(decoder_size):
             input_feed[self.targets[l].name] = answers[:, l]
             input_feed[self.target_weights[l].name] = np.not_equal(answers[:, l], 0).astype(np.float32)
+
+        if ewc_loss_coeff != 0:
+            input_feed[self.ewc_loss_coef] = ewc_loss_coeff
 
         # Loss, a scalar
         output_feed = [self.losses]

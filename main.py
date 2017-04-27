@@ -18,6 +18,7 @@ flags.DEFINE_integer("embedding_size", 128, "Symbol embedding size")
 flags.DEFINE_integer("max_sequence_length", 100, "Maximum sequence length")
 
 flags.DEFINE_integer("vocab_size", 55, "Size of the vocabulary")
+flags.DEFINE_float("validation_percent", 0.15, "Percentage for the testing set")
 
 cfg = flags.FLAGS
 
@@ -46,16 +47,63 @@ if __name__ == '__main__':
         qa_pairs = data_exp1['qa_pairs']
         bucket_lengths = data_exp1['bucket_lengths']
         sentences_exp1 = utils.parse_data_for_ewc_experiment(qa_pairs, bucket_lengths, cfg.max_sequence_length)
-        del data_exp1, bucket_lengths
 
-    utils.train_task(sess, model, cfg.nb_epochs, sentences_exp1, [sentences_exp1], cfg.batch_size, buckets, lams=[0])
+        # Split training and testing set
+        indexes = np.arange(len(sentences_exp1))
+        np.random.shuffle(indexes)
+
+        indexes = np.split(indexes, [int((1 - cfg.validation_percent) * len(indexes))])
+
+        train_exp1 = sentences_exp1[indexes[0]]
+        test_exp1 = sentences_exp1[indexes[1]]
+        # __ CLEAN DICTIONARY __
+        del data_exp1, bucket_lengths, indexes, sentences_exp1
+
+    utils.train_task(sess=sess,
+                     model=model,
+                     nb_epochs=cfg.nb_epochs,
+                     training_data=train_exp1,
+                     testing_datas=[test_exp1],
+                     lambdas=[0],
+                     batch_size=cfg.batch_size,
+                     buckets=buckets,
+                     summary_writer=summary_writer,
+                     exp_name="experience1")
+
+    sess.run([model.update_fisher, model.update_sticky_weights])
+
+    # __ CLEAN DICTIONARY __
+    del train_exp1
 
     ########################### Second experiment ######################################
     # In this experiment we will train the same model on a new dataset where question and
     # answers are in French
     with open(os.path.join('Data', 'Messenger', 'QA_Pairs_Chars_Buckets_FJ.pkl'), 'rb') as f:
         data_exp2 = pickle.load(f)
-        qa_pairs = data_exp1['qa_pairs']
-        bucket_lengths = data_exp1['bucket_lengths']
+        qa_pairs = data_exp2['qa_pairs']
+        bucket_lengths = data_exp2['bucket_lengths']
         sentences_exp2 = utils.parse_data_for_ewc_experiment(qa_pairs, bucket_lengths, cfg.max_sequence_length)
-        del data_exp2, bucket_lengths
+
+        # Split training and testing set
+        indexes = np.arange(len(sentences_exp2))
+        np.random.shuffle(indexes)
+
+        indexes = np.split(indexes, [int((1 - cfg.validation_percent) * len(indexes))])
+
+        train_exp2 = sentences_exp2[indexes[0]]
+        test_exp2 = sentences_exp2[indexes[1]]
+
+        # __ CLEAN DICTIONARY __
+        del data_exp2, bucket_lengths, indexes, sentences_exp2
+
+    utils.train_task(sess=sess,
+                     model=model,
+                     nb_epochs=cfg.nb_epochs,
+                     training_data=train_exp2,
+                     testing_datas=[test_exp1, test_exp2],
+                     lambdas=[0, 15],
+                     batch_size=cfg.batch_size,
+                     buckets=buckets,
+                     summary_writer=summary_writer,
+                     exp_name="experience2",
+                     restore_weights=True)

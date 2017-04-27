@@ -49,7 +49,6 @@ class Seq2Seq(object):
         self.target_weights = [tf.ones_like(label, dtype=tf.float32) for label in self.targets]
 
         self.gradient_norms = []
-        self.updates = []
 
         self.output_projection = None
         self.softmax_loss_function = None
@@ -142,10 +141,10 @@ class Seq2Seq(object):
             self.update_grad_variances = tf.no_op('update_grad_variances')
 
         with tf.control_dependencies(update_grad_variances):
-            self.ts = tf.cond(
+            self.updates = tf.cond(
                 tf.equal(self.ewc_loss_coef, tf.constant(0.)),
-                lambda: opt.apply_gradients(zip(grads, train_vars)),
-                lambda: opt.apply_gradients(zip(grads_ewc, train_vars)))
+                lambda: opt.apply_gradients(zip(grads, train_vars), global_step=self.global_step),
+                lambda: opt.apply_gradients(zip(grads_ewc, train_vars), global_step=self.global_step))
 
         with tf.control_dependencies(update_fisher):
             self.update_fisher = tf.no_op('update_fisher')
@@ -180,15 +179,14 @@ class Seq2Seq(object):
 
         if is_training:
             output_feed += [
-                self.global_step,  # Current global step
-                self.updates  # Nothing
+                self.updates  # Backward pass computation
             ]
 
+        # If is not training, retrieve the outputs
         if not is_training:
             for l in range(decoder_size):
                 output_feed.append(self.outputs[l])
 
-        # Outputs is a list of size (3 + decoder_size)
         outputs = session.run(output_feed, input_feed)
 
         # Cleaner output dic

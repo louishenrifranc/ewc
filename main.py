@@ -47,6 +47,7 @@ if __name__ == '__main__':
     summary_writer = tf.summary.FileWriter('logs/',
                                            graph=sess.graph,
                                            flush_secs=20)
+    saver = tf.train.Saver(max_to_keep=5)
 
     ########################### First experiment ######################################
     # In this experiment we will train a model to predict answer from question, given
@@ -78,8 +79,10 @@ if __name__ == '__main__':
                      buckets=buckets,
                      summary_writer=summary_writer,
                      exp_name="experience1")
-    # saver.save(self.sess, global_step=current_iter, save_path="model/{}".format("model"))
     cprint("[*] Experiment 1 over", color="green")
+
+    cprint("[*] Saving model after experiment 1", color="green")
+    saver.save(sess, global_step=0, save_path="model/{}".format("model_exp1"))
 
     cprint("[*] Compute Fisher matrix and saved all weights", color="yellow")
     sess.run([model.update_fisher, model.update_sticky_weights])
@@ -100,8 +103,8 @@ if __name__ == '__main__':
         # Split training and testing set
         random.shuffle(sentences_exp2)
 
-        train_exp1 = sentences_exp2[:len(sentences_exp2) // 2]
-        test_exp1 = sentences_exp2[len(sentences_exp2) // 2:]
+        train_exp2 = sentences_exp2[:len(sentences_exp2) // 2]
+        test_exp2 = sentences_exp2[len(sentences_exp2) // 2:]
 
         # __ CLEAN DICTIONARY __
         del data_exp2, bucket_lengths, sentences_exp2
@@ -119,5 +122,8 @@ if __name__ == '__main__':
                      exp_name="experience2",
                      restore_weights=True)
     cprint("[*] Experiment 2 over", color="green")
+
+    cprint("[*] Saving model after experiment 2", color="green")
+    saver.save(sess, global_step=0, save_path="model/{}".format("model_exp2"))
 
     cprint("[!] END [!]", color="red")

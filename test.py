@@ -2,13 +2,10 @@ import tensorflow as tf
 import model
 import pickle
 import os
-import utils
-from termcolor import cprint
-import random
 import main
 import numpy as np
 
-model_to_restore = os.path.join("model", "model_experience2_ewc_0")
+model_to_restore = os.path.join("model", "model_exp1-0")
 
 
 def encrypt_single(string, symbol_to_idx):
@@ -57,6 +54,7 @@ if __name__ == '__main__':
             sentence = sentence[:buckets[0][0]]
 
         q = encrypt_single(sentence, char_to_idx)
+        print(q)
         a = encrypt_single("", char_to_idx)
 
         encoder_size, decoder_size = buckets[0]
@@ -64,6 +62,7 @@ if __name__ == '__main__':
         a_pads = np.zeros([1, decoder_size])
         q_pads[0][:q.shape[0]] = q
         a_pads[0][:a.shape[0]] = a
+        print(q_pads)
 
         res = model.forward_with_feed_dict(sess, q_pads, a_pads, is_training=False, ewc_loss_coeff=0)
 

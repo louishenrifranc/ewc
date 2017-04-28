@@ -159,18 +159,6 @@ class Seq2Seq(object):
             self.restore_sticky_weights = tf.no_op('restore_sticky_weights')
         cprint("[!] Model built", color="green")
 
-        # Control gradients with histogram
-        # for gradient, variable in grads:
-        #     if isinstance(gradient, ops.IndexedSlices):
-        #         grad_values = gradient.values
-        #     else:
-        #         grad_values = gradient
-        #     tf.summary.histogram(variable.name, variable)
-        #     tf.summary.histogram(variable.name + "/gradients", grad_values)
-        #     tf.summary.histogram(variable.name + "/gradient_norm",
-        #                          clip_ops.global_norm([grad_values]))
-        #     self.merged_summary_op = tf.summary.merge_all()
-
     def forward_with_feed_dict(self, session, questions, answers, is_training=False, ewc_loss_coeff=0):
 
         encoder_size, decoder_size = self.buckets[0]

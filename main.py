@@ -99,10 +99,6 @@ if __name__ == '__main__':
 
     cprint("[*] Experiment 1 over", color="green")
 
-
-
-
-
     cprint("[*] Compute Fisher matrix and saved all weights", color="yellow")
     sess.run([model.update_fisher, model.update_sticky_weights])
 

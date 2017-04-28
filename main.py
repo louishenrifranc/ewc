@@ -51,7 +51,7 @@ if __name__ == '__main__':
     # Interactive session
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
-    
+
     # Create an object to save curves and histograms of variables 
     summary_writer = tf.summary.FileWriter('logs/',
                                            graph=sess.graph,
@@ -66,12 +66,12 @@ if __name__ == '__main__':
     # stocastic gradient descent.
     with open(os.path.join('Data', 'MovieQA', 'QA_Pairs_Chars_Buckets.pkl'), 'rb') as f:
         cprint("[*] Loading dataset for experiment 1", color="yellow")
-        
+
         # Load parsed data
         data_exp1 = pickle.load(f)
         qa_pairs = data_exp1['qa_pairs']
         bucket_lengths = data_exp1['bucket_lengths']
-        
+
         # Explicit parse for the experimentation. All buckets of size under $buckets are joined in a same list
         sentences_exp1 = utils.parse_data_for_ewc_experiment(qa_pairs, bucket_lengths, cfg.max_sequence_length)
 
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         random.shuffle(sentences_exp1)
         train_exp1 = sentences_exp1[:len(sentences_exp1) // 2]
         test_exp1 = sentences_exp1[len(sentences_exp1) // 2:]
-        
+
         # __ CLEAN DICTIONARY __
         del data_exp1, bucket_lengths, sentences_exp1
         cprint("[*] Loaded", color="green")
@@ -96,7 +96,12 @@ if __name__ == '__main__':
                      summary_writer=summary_writer,
                      saver=saver,
                      exp_name="experience1")
+
     cprint("[*] Experiment 1 over", color="green")
+
+
+
+
 
     cprint("[*] Compute Fisher matrix and saved all weights", color="yellow")
     sess.run([model.update_fisher, model.update_sticky_weights])
@@ -114,7 +119,7 @@ if __name__ == '__main__':
     # testing loss of the first dataset.  
     with open(os.path.join('Data', 'Messenger', 'QA_Pairs_Chars_Buckets.pkl'), 'rb') as f:
         cprint("[*] Loading dataset for experiment 2", color="yellow")
-        
+
         # Loaded parse data
         data_exp2 = pickle.load(f)
         qa_pairs = data_exp2['qa_pairs']
@@ -137,7 +142,7 @@ if __name__ == '__main__':
                      nb_epochs=cfg.nb_epochs,
                      training_data=train_exp2,
                      testing_datas=[test_exp1, test_exp2],
-                     lambdas=[0, 15],
+                     lambdas=[15],
                      batch_size=cfg.batch_size,
                      buckets=buckets,
                      summary_writer=summary_writer,

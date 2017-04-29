@@ -9,15 +9,15 @@ import random
 debug = False
 # Global variables
 flags = tf.app.flags
-flags.DEFINE_integer("nb_epochs", 30000, "Epoch to train [100 000]")
+flags.DEFINE_integer("nb_epochs", 50000, "Epoch to train [100 000]")
 flags.DEFINE_float("learning_rate", 0.0003, "Learning rate of for adam [0.0001")
-flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
+flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm.")
 flags.DEFINE_integer("batch_size", 16, "The size of the batch [64]")
 
 flags.DEFINE_integer("hidden_size", 256, "Hidden size of RNN cell [256]")
 flags.DEFINE_integer("embedding_size", 128, "Symbol embedding size")
 flags.DEFINE_integer("max_sequence_length", 100, "Maximum sequence length")
-flags.DEFINE_integer("num_layers", 2, "Num of layers [3]")
+flags.DEFINE_integer("num_layers", 3, "Num of layers [3]")
 flags.DEFINE_integer("vocab_size", 55, "Size of the vocabulary")
 flags.DEFINE_float("validation_percent", 0.15, "Percentage for the testing set")
 
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         idx_to_char = pickle.load(f)
 
     # In the experiment, we will use a single bucket of length (100, 100)
-    buckets = [(100, 100)]
+    buckets = [(200, 200)]
 
     # Create a Seq2seq model. This model holds all the operation for forwarding, backwarding signal
     # in the neural network, plus computing the Fisher matrix and saving weights for every tasks
@@ -138,7 +138,7 @@ if __name__ == '__main__':
                      nb_epochs=cfg.nb_epochs,
                      training_data=train_exp2,
                      testing_datas=[test_exp1, test_exp2],
-                     lambdas=[15],
+                     lambdas=[0, 25],
                      batch_size=cfg.batch_size,
                      buckets=buckets,
                      summary_writer=summary_writer,
